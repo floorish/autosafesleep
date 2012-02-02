@@ -8,11 +8,12 @@
 	<array>
 		<string>/usr/local/sbin/sleepwatcher</string>
 		<string>-V</string>
-		<string>-s /etc/rc.sleep</string>
-		<string>-w /etc/rc.wakeup</string>
+		<string>-s ~/Desktop/autosafesleep/sleep.sh</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
+	<key>UserName</key>
+	<string>root</string>
 	<key>KeepAlive</key>
 	<true/>
 </dict>
