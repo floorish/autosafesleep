@@ -535,17 +535,6 @@ static void parseArgs (int argc, char * const *argv)
 }
 
 
-static void idleCallback (CFRunLoopTimerRef timer, void *info)
-{
-/*
-	fprintf (stderr, "idle for %ld * %g seconds (timeout: %ld * %g seconds)\n",
-		getIdleTime(), TIMER_RESOLUTION, args.idletimeout, TIMER_RESOLUTION);
-*/
-	message (LOG_INFO, "idle: %s: %d\n", args.idlecommand, system(args.idlecommand));
-	args.idleresume = 1;
-}
-
-
 static CFRunLoopTimerRef setupTimer (long int timeout, CFRunLoopTimerRef timer, CFRunLoopTimerCallBack callback)
 {
 	if (timeout) {
@@ -565,38 +554,6 @@ static CFRunLoopTimerRef setupTimer (long int timeout, CFRunLoopTimerRef timer, 
 		}
 	}
 	return (timer);
-}
-
-
-static void setupIdleTimer (void)
-{
-	static CFRunLoopTimerRef idleTimer = NULL;
-	
-	idleTimer = setupTimer(args.idletimeout, idleTimer, idleCallback);
-}
-
-
-// THIS CALLBACK IS NOT CALLED WHEN THE GUI IS NOT RUNNING
-static void hidCallback (void *context, IOReturn result, void *sender, IOHIDValueRef value)
-{
-	static CFAbsoluteTime timeOfLastCall = 0;
-	
-	CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
-	if (timeOfLastCall == 0)
-		timeOfLastCall = now;
-	if (args.breaklength && (now - timeOfLastCall) >= args.breaklength * TIMER_RESOLUTION) {
-/*
-		fprintf (stderr, "resumed after %.2f seconds (break: %ld * %g seconds)\n",
-			now - timeOfLastCall, args.breaklength, TIMER_RESOLUTION);
-*/
-		message (LOG_INFO, "resume: %s: %d\n", args.resumecommand, system(args.resumecommand));
-	}
-	if (args.idleresume && args.idleresumecommand) {
-		args.idleresume = 0;
-		message (LOG_INFO, "idleresume: %s: %d\n", args.idleresumecommand, system(args.idleresumecommand));
-	}
-	timeOfLastCall = now;
-	setupIdleTimer ();
 }
 
 
@@ -657,23 +614,6 @@ static CFArrayRef createGenericDesktopMatchingDictionaries (void)	// see TN 2187
 }
 
 
-static void initializeResumeNotifications (void)	// see TN 2187
-{
-	IOHIDManagerRef hidManager = IOHIDManagerCreate(kCFAllocatorDefault, kIOHIDOptionsTypeNone);
-	if (! hidManager) {
-		message (LOG_ERR, "IOHIDManagerCreate failed\n");
-		exit (1);
-	}
-	if (IOHIDManagerOpen(hidManager, kIOHIDOptionsTypeNone) != kIOReturnSuccess) {
-		message (LOG_ERR, "IOHIDManagerOpen failed\n");
-		exit (1);
-	}
-	IOHIDManagerScheduleWithRunLoop (hidManager, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
-	IOHIDManagerSetDeviceMatchingMultiple (hidManager, createGenericDesktopMatchingDictionaries());
-	IOHIDManagerRegisterInputValueCallback (hidManager, hidCallback, (void *) -1);
-}
-
-
 void powerCallback (void *rootPort, io_service_t y, natural_t msgType, void *msgArgument)
 {
 	int	result;
@@ -715,7 +655,6 @@ void powerCallback (void *rootPort, io_service_t y, natural_t msgType, void *msg
 			message (LOG_INFO, "can't sleep\n");
 		break;
 	case kIOMessageSystemHasPoweredOn :
-		setupIdleTimer ();
 		if (args.wakeupcommand)
 			message (LOG_INFO, "wakeup: %s: %d\n", args.wakeupcommand, system(args.wakeupcommand));
 		break;
@@ -739,140 +678,12 @@ static void initializePowerNotifications (void)
 }
 
 
-void displayCallback (void *context, io_service_t y, natural_t msgType, void *msgArgument)
-{
-	static enum { displayOn, displayDimmed, displayOff } state = displayOn;
-	
-/*
-	fprintf (stderr, "displayCallback: message_type %08lx, arg %08lx\n",
-		(long unsigned int) msgType, (long  unsigned int) msgArgument);
-*/
-	switch (msgType) {
-	case kIOMessageDeviceWillPowerOff :
-		state++;
-		if (state == displayDimmed && args.displaydimcommand)
-			message (LOG_INFO, "displaydim: %s: %d\n", args.displaydimcommand,
-				system(args.displaydimcommand));
-		else if (state == displayOff && args.displaysleepcommand)
-			message (LOG_INFO, "displaysleep: %s: %d\n", args.displaysleepcommand,
-				system(args.displaysleepcommand));
-		break;
-	case kIOMessageDeviceHasPoweredOn :
-		if (state == displayDimmed && args.displayundimcommand)
-			message (LOG_INFO, "displayundim: %s: %d\n", args.displayundimcommand,
-				system(args.displayundimcommand));
-		else if (args.displaywakeupcommand)
-			message (LOG_INFO, "displaywakeup: %s: %d\n", args.displaywakeupcommand,
-				system(args.displaywakeupcommand));
-		state = displayOn;
-		break;
-	}
-}
-
-
-static void initializeDisplayNotifications (void)
-{
-	io_service_t		displayWrangler;
-	IONotificationPortRef	notificationPort;
-	io_object_t		notifier;
-
-	displayWrangler = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceNameMatching("IODisplayWrangler"));
-	if (! displayWrangler) {
-		message (LOG_ERR, "IOServiceGetMatchingService failed\n");
-		exit (1);
-	}
-	notificationPort = IONotificationPortCreate(kIOMasterPortDefault);
-	if (! notificationPort) {
-		message (LOG_ERR, "IONotificationPortCreate failed\n");
-		exit (1);
-	}
-	if (IOServiceAddInterestNotification(notificationPort, displayWrangler, kIOGeneralInterest,
-		displayCallback, NULL, &notifier) != kIOReturnSuccess) {
-		message (LOG_ERR, "IOServiceAddInterestNotification failed\n");
-		exit (1);
-	}
-	CFRunLoopAddSource (CFRunLoopGetCurrent(), IONotificationPortGetRunLoopSource(notificationPort), kCFRunLoopDefaultMode);
-	IOObjectRelease (displayWrangler);
-}
-
-
-#define POWER_SOURCE_ERROR	-1	// error, don't assume power source changed
-#define POWER_SOURCE_BATTERY	0	// not plugged in, using battery power
-#define POWER_SOURCE_AC		1	// plugged in, using AC power
-
-
-int getPowerSource (void)		// returns one of the three #defines above
-{
-	int result = POWER_SOURCE_ERROR;
-	
-	CFTypeRef info = NULL;
-	CFArrayRef powerSources = NULL;
-	CFTypeRef source = NULL;
-	CFDictionaryRef description = NULL;
-	CFStringRef powerSourceState = NULL;
-	
-	info = IOPSCopyPowerSourcesInfo();
-	if (! info) goto ret;
-	powerSources = IOPSCopyPowerSourcesList(info);
-	if (! powerSources) goto ret;
-	if (CFArrayGetCount(powerSources) == 0) goto ret;
-	source = CFArrayGetValueAtIndex(powerSources, 0);
-	if (! source) goto ret;
-	description = IOPSGetPowerSourceDescription(info, source);
-	if (! description) goto ret;
-	powerSourceState = CFDictionaryGetValue(description, CFSTR(kIOPSPowerSourceStateKey));
-	if (! powerSourceState) goto ret;
-	result = (CFStringCompare(powerSourceState, CFSTR(kIOPSACPowerValue), 0) == kCFCompareEqualTo) ?
-		POWER_SOURCE_AC : POWER_SOURCE_BATTERY;
-ret :
-	if (info) CFRelease (info);
-	if (powerSources) CFRelease (powerSources);
-	//if (source) CFRelease (source);
-	//if (description) CFRelease (description);
-	//if (powerSourceState) CFRelease (powerSourceState);
-	return result;
-}
-
-
-void powerSourceCallback (void *context)
-{
-	static int oldPowerSource = POWER_SOURCE_ERROR;
-	
-	int powerSource = getPowerSource();
-	if (powerSource != POWER_SOURCE_ERROR && powerSource != oldPowerSource) {
-		if (powerSource == POWER_SOURCE_AC) {
-			if (args.plugcommand)
-				message (LOG_INFO, "power plugged in: %s: %d\n", args.plugcommand,
-					system(args.plugcommand));
-		} else {
-			if (args.unplugcommand)
-				message (LOG_INFO, "power unplugged: %s: %d\n", args.unplugcommand,
-					system(args.unplugcommand));
-		}
-		oldPowerSource = powerSource;
-	}
-	
-}
-
-
-static void initializePowerSourceNotifications (void)
-{
-	CFRunLoopSourceRef source = IOPSNotificationCreateRunLoopSource(powerSourceCallback, NULL);
-	if (! source) {
-		message(LOG_ERR, "IOPSNotificationCreateRunLoopSource failed\n");
-		exit (1);
-	}
-	CFRunLoopAddSource (CFRunLoopGetCurrent(), source, kCFRunLoopDefaultMode);
-}
-
-
 static void signalCallback (int sig)
 {
 	switch (sig) {
 	case SIGHUP :
 		message (LOG_INFO, "got SIGHUP - reconfiguring\n");	
 		parseArgs (args.argc, args.argv);
-		setupIdleTimer ();
 		break;
 	case SIGTERM :
 	case SIGINT :
@@ -900,11 +711,7 @@ int main (int argc, char * const *argv)
 	signal (SIGHUP, signalCallback);
 	signal (SIGINT, signalCallback);
 	signal (SIGTERM, signalCallback);
-	setupIdleTimer ();
-	initializeResumeNotifications ();
 	initializePowerNotifications ();
-	initializeDisplayNotifications ();
-	initializePowerSourceNotifications ();
 	CFRunLoopRun ();
 	return (0);
 }
