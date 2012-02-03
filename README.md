@@ -4,18 +4,21 @@ By default MacOSX uses SafeSleep when your MacBook goes to sleep. This means the
 
 This little tool will write the ram contents to disk only if your battery percentage is below a certain threshold, say 15%. If the amount of battery left is above that threshold, your MB will go to sleep quickly without writing anyting to disk. We can assume you connect to power before your battery is fully empty, because when in sleep the MB will use little power.
 
-Benefits:
-*  No waiting for your MB to fully enter sleep
-*  No excessive writing to your poor SSD everytime you close your MB
-*  SafeSleep when you need it, only below a certain threshold
-*  Daemon uses almost no resources, it only listens for closing the lid!
+### Benefits:
 
-This uses a modified version of SleepWatcher by [Bernhard Baehr](http://www.bernhard-baehr.de/), all credits go to him!
-NOT ALL FEATURES FROM SleepWatcher ARE AVAILABLE, IF YOU WISH TO USE ALL FEATURES GO TO http://www.bernhard-baehr.de/
+- No waiting for your MB to fully enter sleep
+- No excessive writing to your poor SSD everytime you close your MB
+- SafeSleep when you need it, only below a certain threshold
+- Daemon uses almost no resources, it only listens for closing the lid!
+
+
+*This uses a modified version of SleepWatcher by [Bernhard Baehr](http://www.bernhard-baehr.de/), all credits go to him!*
+
+**NOT ALL FEATURES FROM SleepWatcher ARE AVAILABLE, IF YOU WISH TO USE ALL FEATURES GO TO http://www.bernhard-baehr.de/**
 
 ## Installation
 
-Please make sure the directories are right, you probably don't want to leave it on your Desktop! Check config/de.bernhard-baehr.sleepwatcher.plist to make sure it links to the correct shell script.
+Please make sure the directories are right, you probably don't want to leave it on your Desktop! Check `config/de.bernhard-baehr.sleepwatcher.plist` to make sure it links to the correct shell script.
 
     $ sudo mkdir -p /usr/local/sbin /usr/local/share/man/man8
     $ cd ~/Desktop/autosafesleep/
@@ -26,6 +29,8 @@ Please make sure the directories are right, you probably don't want to leave it 
 
 
 Below you'll find the original readme from SleepWatcher:
+
+- - -
 
 ## SleepWatcher ReadMe
 
@@ -79,7 +84,7 @@ When you use SleepWatcher on a single user Mac and only want to execute your own
 Now SleepWatcher runs as a user agent that is stopped when you log off from the Mac and that is restarted when you log in again. Note that you must run SleepWatcher as a user agent when you want to use the options -t -i or -b -r (execute a command after a given time of user inactivity or when the user resumes its activity after a break), because these options require the Mac OS X GUI running, and this is not the case when SleepWatcher is started as a system wide daemon while booting.
 
 
-Upgrade from Version 2.1 and later
+### Upgrade from Version 2.1 and later
 
 For the following steps, we assume that you have unpacked the SleepWatcher 2.2 download on your desktop, i. e. you have the folder ~/Desktop/sleepwatcher_2.2 with this ReadMe as ~/Desktop/sleepwatcher_2.2/ReadMe.rtf.
 
@@ -93,7 +98,7 @@ For the following steps, we assume that you have unpacked the SleepWatcher 2.2 d
     $ sudo killall sleepwatcher
 
 
-Installation for new SleepWatcher users
+### Installation for new SleepWatcher users
 
 When you never have used SleepWatcher before, the following steps are suggests, assuming that you have unpacked the SleepWatcher 2.2 download on your desktop, i. e. you have the folder ~/Desktop/sleepwatcher_2.2 with this ReadMe as ~/Desktop/sleepwatcher_2.2/ReadMe.rtf.
 
@@ -120,26 +125,26 @@ When you never have used SleepWatcher before, the following steps are suggests, 
 7. Load the launchd agent configuration using launchctl (see examples above and the launchctl man page).
 
 
-Version History
+### Version History
 
-24.12.2002  version 1.0     first public release
-12.01.2003  version 1.0.1       SleepWatcher is now compatible with Mac OS X 10.1 (SleepWatcher 1.0.1 is compatible with Mac OS X 10.1-10.3)
-05.05.2005  version 2.0     SleepWatcher evolved to a more general activity monitor (SleepWatcher 2.0 is compatible with Mac OS X 10.3-10.4)
-08.06.2005  version 2.0.1       more robust /etc/rc.sleep and /etc/rc.wakeup scripts, installer packages no longer disturb directory permissions
-31.12.2005  version 2.0.2       added -E option to execute a command when the display undims without having slept before, /etc/rc.sleep and
+- 24.12.2002  version 1.0     first public release
+- 12.01.2003  version 1.0.1       SleepWatcher is now compatible with Mac OS X 10.1 (SleepWatcher 1.0.1 is compatible with Mac OS X 10.1-10.3)
+- 05.05.2005  version 2.0     SleepWatcher evolved to a more general activity monitor (SleepWatcher 2.0 is compatible with Mac OS X 10.3-10.4)
+- 08.06.2005  version 2.0.1       more robust /etc/rc.sleep and /etc/rc.wakeup scripts, installer packages no longer disturb directory permissions
+- 31.12.2005  version 2.0.2       added -E option to execute a command when the display undims without having slept before, /etc/rc.sleep and
                     /etc/rc.wakup now only execute sleep or wakeup scripts of users currently logged in
-07.01.2006  version 2.0.3       Mac OS X 10.3 compatibility was broken in version 2.0.2
-28.04.2006  version 2.0.4       SleepWatcher is now a Universal binary, /etc/rc.sleep and /etc/rc.wakeup now handle user names with more than eight characters correctly
-02.11.2007  version 2.0.5       SleepWatcher is now compatible with Mac OS X 10.5
-02.04.2010  version 2.1     added -b -r, -P and -U options; removed the installer packages and switched to launchd for starting SleepWatcher
+- 07.01.2006  version 2.0.3       Mac OS X 10.3 compatibility was broken in version 2.0.2
+- 28.04.2006  version 2.0.4       SleepWatcher is now a Universal binary, /etc/rc.sleep and /etc/rc.wakeup now handle user names with more than eight characters correctly
+- 02.11.2007  version 2.0.5       SleepWatcher is now compatible with Mac OS X 10.5
+- 02.04.2010  version 2.1     added -b -r, -P and -U options; removed the installer packages and switched to launchd for starting SleepWatcher
                     (SleepWatcher 2.1 runs with Mac OS X 10.5 or 10.6)
-06.02.2011  version 2.1.1       fixed a bug in argument parsing (when using only the -P or -U option, SleepWatcher 2.1 complained about "no useful options");
+- 06.02.2011  version 2.1.1       fixed a bug in argument parsing (when using only the -P or -U option, SleepWatcher 2.1 complained about "no useful options");
                     now the idle timer (for the -t -i option) is reset when the Mac wakes up, so the idle command is executed even when the wakeup took place
                     without user interactivity (scheduled wakeup or Wake On LAN)
-25.07.2011  version 2.1.2       removes the syslog warning "IOHIDDeviceRegisterInputValueCallback called with a null context" that appears with Mac OS X 10.7
-28.08.2011  version 2.2     added the -c and -R options; improved specification of the command line syntax for SleepWatcher
+- 25.07.2011  version 2.1.2       removes the syslog warning "IOHIDDeviceRegisterInputValueCallback called with a null context" that appears with Mac OS X 10.7
+- 28.08.2011  version 2.2     added the -c and -R options; improved specification of the command line syntax for SleepWatcher
 
-
+- - -
 
 Copyright (C) 2002-2011 Bernhard Baehr (bernhard.baehr@gmx.de)
 
